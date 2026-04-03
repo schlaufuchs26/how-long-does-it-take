@@ -124,11 +124,17 @@
   }
 
   .scale-labels {
-    display: flex; justify-content: space-between;
-    font-size: .65rem; color: var(--muted); margin-top: .25rem;
-    flex-wrap: nowrap; overflow: hidden;
+    position: relative;
+    height: 1.2rem;
+    margin-top: .3rem;
   }
-  .scale-labels span { flex: 1; text-align: center; }
+  .scale-labels span {
+    position: absolute;
+    font-size: .62rem;
+    color: var(--muted);
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
 
   .submit-btn {
     display: block; width: 100%;
@@ -592,12 +598,14 @@ function startGame() {
     d.className = 'pip'; d.id = 'pip-' + i;
     pips.appendChild(d);
   }
-  // Build scale labels
+  // Build scale labels at correct log positions
   const labelsEl = document.getElementById('scale-labels');
   labelsEl.innerHTML = '';
-  SCALE_LABELS.forEach(l => {
+  SCALE_LABELS.forEach((l, i) => {
     const s = document.createElement('span');
     s.textContent = l;
+    const pct = (Math.log10(SCALE_SECONDS[i]) - LOG_MIN) / (LOG_MAX - LOG_MIN) * 100;
+    s.style.left = Math.max(2, Math.min(98, pct)) + '%';
     labelsEl.appendChild(s);
   });
 

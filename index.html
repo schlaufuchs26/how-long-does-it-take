@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How Long Does It Take? ⏱️</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #131928;
+    --surface2: #1c2438;
+    --accent: #f59e0b;
+    --accent2: #fbbf24;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --border: #2a3550;
+    --r: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    width: 100%;
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+  }
+  header h1 {
+    font-size: clamp(1.7rem, 4.5vw, 2.6rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #f59e0b, #ec4899, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p { color: var(--muted); font-size: .95rem; margin-top: .4rem; }
+
+  #score-bar {
+    display: flex; gap: .5rem; align-items: center; justify-content: center;
+    padding: .65rem 1rem; background: var(--surface);
+    border-bottom: 1px solid var(--border); width: 100%; flex-wrap: wrap;
+  }
+  .pip { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface2); transition: .2s; }
+  .pip.ok  { background: var(--green); border-color: var(--green); }
+  .pip.bad { background: var(--red); border-color: var(--red); }
+  #score-text { font-weight: 700; color: var(--accent); font-size: .95rem; margin-left: .4rem; }
+  #q-counter  { color: var(--muted); font-size: .85rem; }
+
+  main { width: 100%; max-width: 720px; padding: 1.5rem 1rem 3rem; flex: 1; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* INTRO */
+  #intro { text-align: center; padding: 2rem 1rem; }
+  .float { font-size: 4rem; display: block; margin-bottom: 1rem; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+  #intro h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem; }
+  #intro p { color: var(--muted); line-height: 1.7; font-size: .95rem; margin-bottom: .75rem; }
+  .example-row {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 1rem 1.25rem;
+    text-align: left; margin: 1.25rem 0;
+  }
+  .example-row .ex-q { font-weight: 600; margin-bottom: .4rem; }
+  .example-row .ex-a { color: var(--accent); font-size: .9rem; }
+
+  /* PROGRESS */
+  #prog-wrap { background: var(--surface2); border-radius: 99px; height: 5px; margin-bottom: 1.5rem; overflow: hidden; }
+  #prog { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#f59e0b,#ec4899); transition: width .4s; }
+
+  /* QUESTION CARD */
+  .qcard {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 1.5rem; margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .qcard .qlbl { font-size: .7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 1rem; }
+  .qcard .q-emoji { font-size: 3rem; display: block; margin-bottom: .75rem; }
+  .qcard .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.4; }
+  .qcard .q-hint { font-size: .85rem; color: var(--muted); margin-top: .5rem; }
+
+  /* SLIDER SECTION */
+  .slider-section { margin-bottom: 1.5rem; }
+  .slider-display {
+    text-align: center; margin-bottom: .75rem;
+    font-size: 1.4rem; font-weight: 800; color: var(--accent);
+    min-height: 2.2rem;
+  }
+  .slider-sub { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 8px;
+    border-radius: 99px;
+    background: var(--surface2);
+    outline: none; cursor: pointer;
+    margin: .5rem 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 2px var(--accent);
+    cursor: pointer;
+    transition: transform .1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type=range]::-moz-range-thumb {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    cursor: pointer;
+  }
+
+  .scale-labels {
+    display: flex; justify-content: space-between;
+    font-size: .65rem; color: var(--muted); margin-top: .25rem;
+    flex-wrap: nowrap; overflow: hidden;
+  }
+  .scale-labels span { flex: 1; text-align: center; }
+
+  .submit-btn {
+    display: block; width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: var(--r);
+    color: #000; font-size: 1rem; font-weight: 800;
+    padding: .85rem; cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .submit-btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+  .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* RESULT OVERLAY */
+  #result-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 1.25rem; margin-bottom: 1.25rem;
+    display: none; animation: slide .3s ease;
+  }
+  @keyframes slide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+  #result-panel .verdict {
+    font-size: 1.5rem; font-weight: 900; text-align: center; margin-bottom: .75rem;
+  }
+  .verdict.ok  { color: var(--green); }
+  .verdict.bad { color: var(--red); }
+  .answer-line {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    margin: .5rem 0; font-size: .95rem;
+  }
+  .answer-line .your { color: var(--muted); }
+  .answer-line .real { color: var(--accent); font-weight: 700; }
+  .answer-line .err  { color: var(--text); font-size: .8rem; }
+  .compare-bar-wrap {
+    background: var(--surface2); border-radius: 4px; height: 8px;
+    margin: .75rem 0; position: relative; overflow: visible;
+  }
+  .cbar-real { position: absolute; top: 0; height: 100%; background: var(--accent); border-radius: 4px; }
+  .cbar-you  { position: absolute; top: -4px; width: 4px; height: 16px; background: var(--green); border-radius: 2px; transform: translateX(-50%); }
+  .cbar-you.bad { background: var(--red); }
+  #fact-box { color: var(--muted); font-size: .88rem; line-height: 1.6; margin-top: .75rem; }
+  #fact-box strong { color: var(--text); }
+
+  #next-btn {
+    display: none; width: 100%;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--r); color: var(--text);
+    font-size: 1rem; font-weight: 800; padding: .8rem; cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  #next-btn:hover { background: #253049; transform: translateY(-1px); }
+
+  /* RESULTS */
+  #results { text-align: center; }
+  #res-emoji { font-size: 5rem; display: block; margin-bottom: 1rem; animation: pop .5s; }
+  @keyframes pop { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.2);opacity:1} 100%{transform:scale(1)} }
+  #results h2 { font-size: 1.7rem; font-weight: 900; margin-bottom: .5rem; }
+  #res-score { font-size: 3.5rem; font-weight: 900; color: var(--accent); margin: .5rem 0; }
+  .res-of { color: var(--muted); font-size: 1rem; margin-bottom: 1rem; }
+  #res-sub { color: var(--muted); font-size: .9rem; margin-bottom: .5rem; }
+  #res-msg { color: var(--muted); font-size: .9rem; margin-bottom: 2rem; line-height: 1.6; }
+  .btn-row { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+  .btn { display: inline-block; padding: .8rem 2rem; border-radius: var(--r); font-size: 1rem; font-weight: 800; cursor: pointer; border: none; transition: opacity .15s, transform .1s; }
+  .btn:hover { opacity: .9; transform: translateY(-2px); }
+  .btn-p { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #000; }
+  .btn-s { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+  #breakdown { text-align: left; }
+  #breakdown h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: .75rem; }
+  .bd { display: flex; align-items: flex-start; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid var(--border); font-size: .84rem; }
+  .bd:last-child { border-bottom: none; }
+  .bd-icon { font-size: .9rem; flex-shrink: 0; margin-top: 1px; }
+  .bd-info { flex: 1; }
+  .bd-q { font-weight: 600; }
+  .bd-ans { color: var(--muted); font-size: .8rem; margin-top: 1px; }
+  .bd-ans .real { color: var(--accent); }
+
+  footer { text-align: center; color: var(--muted); font-size: .72rem; padding: 1.5rem 1rem; opacity: .6; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⏱️ How Long Does It Take?</h1>
+  <p>Guess the duration of things — from a blink to the age of the universe</p>
+</header>
+
+<div id="score-bar">
+  <div id="pips" style="display:flex;gap:5px;"></div>
+  <span id="score-text">0 / 10</span>
+  <span id="q-counter">• Question 1 of 10</span>
+</div>
+
+<main>
+  <!-- INTRO -->
+  <div id="intro" class="screen active">
+    <span class="float">⏳</span>
+    <h2>How good is your sense of time?</h2>
+    <p>A blink of an eye takes about 150ms. A human lifetime is ~2.5 billion seconds. But what about everything in between?</p>
+    <p>Use the log-scale slider to guess how long things take. You'll be scored on how close you get.</p>
+    <div class="example-row">
+      <div class="ex-q">⚡ How long does a lightning bolt last?</div>
+      <div class="ex-a">Answer: ~0.2 seconds (the flash is ~30ms, but the full event is longer)</div>
+    </div>
+    <div class="example-row">
+      <div class="ex-q">🌍 How long does it take Earth to orbit the Sun?</div>
+      <div class="ex-a">Answer: 365.25 days — you probably knew that one!</div>
+    </div>
+    <p>10 questions per round. Closer = more points.</p>
+    <br>
+    <button class="btn btn-p" style="font-size:1.05rem;padding:.9rem 3rem" onclick="startGame()">▶ Start</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div id="prog-wrap"><div id="prog" style="width:0%"></div></div>
+    <div class="qcard">
+      <div class="qlbl">⏱️ How long does it take?</div>
+      <span id="q-emoji" class="q-emoji"></span>
+      <div id="q-text" class="q-text"></div>
+      <div id="q-hint" class="q-hint"></div>
+    </div>
+
+    <div class="slider-section">
+      <div id="slider-display" class="slider-display">
+        <div id="val-text"></div>
+        <div class="slider-sub" id="val-sub"></div>
+      </div>
+      <input type="range" id="slider" min="0" max="100" value="50" step="0.1" oninput="updateSlider()" />
+      <div class="scale-labels" id="scale-labels"></div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitAnswer()">Submit Answer</button>
+
+    <div id="result-panel">
+      <div id="result-verdict" class="verdict"></div>
+      <div class="answer-line">
+        <span class="your">Your guess: <strong id="your-ans"></strong></span>
+        <span>·</span>
+        <span class="real">Actual: <strong id="real-ans"></strong></span>
+      </div>
+      <div class="compare-bar-wrap" id="cbar-wrap">
+        <div class="cbar-real" id="cbar-real"></div>
+        <div class="cbar-you" id="cbar-you"></div>
+      </div>
+      <div id="fact-box"></div>
+    </div>
+
+    <button id="next-btn" onclick="nextQ()">Next →</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="screen">
+    <span id="res-emoji">🎉</span>
+    <h2 id="res-title">Not bad!</h2>
+    <div id="res-score">0</div>
+    <div class="res-of">out of 100 pts</div>
+    <p id="res-sub"></p>
+    <p id="res-msg"></p>
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="startGame()">🔄 Play Again</button>
+      <button class="btn btn-s" onclick="showIntro()">🏠 Home</button>
+    </div>
+    <div id="breakdown"><h3>📋 Your Round</h3><div id="bd-list"></div></div>
+  </div>
+</main>
+
+<footer>⏱️ How Long Does It Take? • Made by Schlaufuchs 🦊</footer>
+
+<script>
+// ── TIME DATA ──────────────────────────────────────────────────────────────
+// seconds is the canonical unit
+const MS = 0.001;
+const SEC = 1;
+const MIN = 60;
+const HR = 3600;
+const DAY = 86400;
+const WEEK = 604800;
+const MONTH = 2628000;   // 30.4 days
+const YEAR = 31557600;   // 365.25 days
+const DECADE = YEAR * 10;
+const CENTURY = YEAR * 100;
+const KYR = YEAR * 1000;
+const MYR = YEAR * 1e6;
+const BYR = YEAR * 1e9;
+
+const ITEMS = [
+  {
+    emoji: "👁️",
+    q: "A human blink",
+    hint: "The involuntary kind, not a slow deliberate one",
+    seconds: 0.15,
+    fact: "A blink takes <strong>100–400 milliseconds</strong>. We blink ~15–20 times per minute, yet we barely notice the brief darkness each time."
+  },
+  {
+    emoji: "⚡",
+    q: "A single lightning bolt (the full discharge)",
+    hint: "Not just the visible flash",
+    seconds: 0.3,
+    fact: "A full lightning bolt discharge lasts <strong>about 0.2–0.5 seconds</strong>, though the visible bright return stroke is only ~30ms."
+  },
+  {
+    emoji: "❤️",
+    q: "One heartbeat (at resting rate)",
+    hint: "Average resting heart rate ~70 bpm",
+    seconds: 60 / 70,
+    fact: "At a resting rate of <strong>70 beats per minute</strong>, one heartbeat takes ~0.86 seconds. That's about 100,000 beats per day."
+  },
+  {
+    emoji: "🌍",
+    q: "Earth to complete one rotation (a sidereal day)",
+    hint: "Not quite 24 hours...",
+    seconds: 86164,
+    fact: "Earth's sidereal day is <strong>23 hours 56 minutes 4 seconds</strong> (~86,164s) — slightly less than a solar day due to Earth's orbit."
+  },
+  {
+    emoji: "🌕",
+    q: "The Moon to orbit Earth once",
+    hint: "One lunar month",
+    seconds: DAY * 27.3,
+    fact: "The Moon takes <strong>27.3 days</strong> (a sidereal month) to orbit Earth once. The synodic month (new moon to new moon) is ~29.5 days."
+  },
+  {
+    emoji: "🌞",
+    q: "Earth to orbit the Sun once",
+    hint: "One tropical year",
+    seconds: YEAR,
+    fact: "Earth's year is <strong>365.2422 days</strong>. That's why we add a leap day every 4 years (with century corrections)."
+  },
+  {
+    emoji: "💡",
+    q: "Light to travel from the Sun to Earth",
+    hint: "The Sun is ~150 million km away",
+    seconds: 499,
+    fact: "Sunlight takes <strong>~8 minutes 19 seconds</strong> (499s) to reach Earth. This means we see the Sun as it was 8 minutes ago."
+  },
+  {
+    emoji: "🌙",
+    q: "Light to travel from the Moon to Earth",
+    hint: "The Moon is ~384,000 km away",
+    seconds: 1.28,
+    fact: "Light from the Moon takes <strong>~1.28 seconds</strong> to reach us. This is why there's a noticeable delay in lunar radio communications."
+  },
+  {
+    emoji: "🍌",
+    q: "A banana to ripen at room temperature (unripe to perfectly ripe)",
+    hint: "",
+    seconds: DAY * 4,
+    fact: "Bananas typically take <strong>3–5 days</strong> to ripen at room temperature. Ethylene gas produced by the banana triggers the process."
+  },
+  {
+    emoji: "🦟",
+    q: "The average lifespan of a mosquito (female)",
+    hint: "The ones that bite are female",
+    seconds: WEEK * 6,
+    fact: "Female mosquitoes live <strong>~6 weeks</strong> on average. Males only live about a week. Females can lay up to 300 eggs at a time."
+  },
+  {
+    emoji: "🧊",
+    q: "Water to boil from room temperature in a standard kettle",
+    hint: "Starting from ~20°C, filling the kettle about halfway",
+    seconds: 150,
+    fact: "A 1-litre kettle takes <strong>2–3 minutes</strong> to boil. Heating water from 20°C to 100°C at sea level requires about 336,000 joules per litre."
+  },
+  {
+    emoji: "🎵",
+    q: "The average pop song",
+    hint: "In the streaming era (post-2015)",
+    seconds: MIN * 3.5,
+    fact: "The average song in Spotify's top 10 has been getting <strong>shorter</strong> — dropping from ~4 mins in 2000 to ~3.5 mins today, partly driven by streaming payouts."
+  },
+  {
+    emoji: "🌍",
+    q: "A full circumnavigation of Earth by plane",
+    hint: "Non-stop at commercial jet speed, ~900 km/h",
+    seconds: HR * 44,
+    fact: "Earth's circumference is ~40,075 km. At 900 km/h, that's about <strong>44 hours</strong>. The fastest non-stop circumnavigation is ~23 hours in a purpose-built jet."
+  },
+  {
+    emoji: "⛰️",
+    q: "Plate tectonics to move 1 cm",
+    hint: "Average rate of continental drift",
+    seconds: YEAR / 3,
+    fact: "Tectonic plates move at <strong>2–15 cm per year</strong> (about the rate your fingernails grow). At 3 cm/year, 1 cm takes about 4 months."
+  },
+  {
+    emoji: "🌲",
+    q: "A giant sequoia to grow from seed to 10 metres tall",
+    hint: "The tallest trees on Earth",
+    seconds: DECADE * 2,
+    fact: "Giant sequoias take <strong>~20 years</strong> to reach 10 metres. They can live over 3,000 years and keep growing. The largest weigh over 1,000 tonnes."
+  },
+  {
+    emoji: "🦕",
+    q: "The time since dinosaurs went extinct",
+    hint: "The non-avian dinosaurs, at the K-Pg event",
+    seconds: MYR * 66,
+    fact: "Non-avian dinosaurs went extinct <strong>~66 million years ago</strong> when a 10-km asteroid hit the Yucatan Peninsula. Birds are technically living dinosaurs."
+  },
+  {
+    emoji: "🌌",
+    q: "The age of the universe",
+    hint: "Since the Big Bang",
+    seconds: BYR * 13.8,
+    fact: "The universe is <strong>~13.8 billion years old</strong>. The observable universe extends ~46 billion light-years in every direction."
+  },
+  {
+    emoji: "🦷",
+    q: "A tooth cavity to form (from initial demineralisation to noticeable decay)",
+    hint: "Without treatment or fluoride",
+    seconds: MONTH * 18,
+    fact: "A cavity typically takes <strong>6 months to 2 years</strong> to develop. Fluoride reverses early-stage demineralisation before a cavity forms."
+  },
+  {
+    emoji: "☕",
+    q: "Caffeine to reach peak concentration in your bloodstream",
+    hint: "After drinking a coffee",
+    seconds: MIN * 45,
+    fact: "Caffeine peaks in the blood <strong>30–60 minutes</strong> after consumption. Its half-life is about 5–6 hours — so half is still in your system at midnight if you had coffee at 6 PM."
+  },
+  {
+    emoji: "🐢",
+    q: "A tortoise to reach sexual maturity",
+    hint: "Aldabra or Galápagos giant tortoise",
+    seconds: YEAR * 25,
+    fact: "Giant tortoises reach sexual maturity at <strong>20–30 years old</strong>. They can live 150+ years — there are living tortoises that were adults when Darwin visited the Galápagos."
+  },
+  {
+    emoji: "🧬",
+    q: "Human DNA to fully replicate (one cell division)",
+    hint: "The entire genome: ~3 billion base pairs",
+    seconds: HR * 8,
+    fact: "A human cell copies its <strong>3 billion base pairs</strong> in about 6–8 hours using ~50,000 DNA polymerase molecules working simultaneously."
+  },
+  {
+    emoji: "🌋",
+    q: "The 1980 eruption of Mount St. Helens from first earthquake to main blast",
+    hint: "The famous eruption in Washington State",
+    seconds: DAY * 61,
+    fact: "From the first earthquakes (March 20) to the catastrophic May 18 eruption was <strong>~61 days</strong>. The blast was 500× more powerful than the Hiroshima bomb."
+  },
+  {
+    emoji: "🏊",
+    q: "The world record 100m freestyle swim",
+    hint: "Men's Olympic event",
+    seconds: 46.9,
+    fact: "Caeleb Dressel set the record at <strong>46.91 seconds</strong> in 2021. Compare to the average person (~90s) or Michael Phelps in 2008 (47.51s)."
+  },
+  {
+    emoji: "🧊",
+    q: "An ice cube to fully melt in a warm room (~25°C)",
+    hint: "A standard household ice cube, no stirring",
+    seconds: MIN * 30,
+    fact: "A typical ice cube melts in <strong>20–45 minutes</strong> at room temperature. Stirring, humidity, and cube size all affect the rate significantly."
+  },
+  {
+    emoji: "🌞",
+    q: "The Sun to complete one orbit of the Milky Way galaxy",
+    hint: "Called a 'galactic year' or 'cosmic year'",
+    seconds: MYR * 230,
+    fact: "The Sun orbits the Milky Way at <strong>~230 km/s</strong>, completing one orbit every ~225–250 million years. In its lifetime, the Sun has orbited about 20 times."
+  },
+  {
+    emoji: "🍞",
+    q: "A loaf of bread to bake (from raw dough to done)",
+    hint: "Standard white or wholemeal loaf at ~200°C",
+    seconds: MIN * 35,
+    fact: "A standard loaf bakes in <strong>30–40 minutes</strong>. The Maillard reaction (responsible for the crust's colour and flavour) occurs above 140°C."
+  },
+  {
+    emoji: "🚀",
+    q: "The Apollo 11 journey from Earth to the Moon",
+    hint: "Launch to lunar orbit",
+    seconds: DAY * 3.3,
+    fact: "Apollo 11 took <strong>~76 hours</strong> (3.2 days) to reach lunar orbit after launch. The total mission was 8 days 3 hours 18 minutes."
+  },
+  {
+    emoji: "💎",
+    q: "Natural diamond formation (carbon to diamond underground)",
+    hint: "Deep in Earth's mantle",
+    seconds: BYR * 1.5,
+    fact: "Natural diamonds form over <strong>1–3 billion years</strong> at depths of 150–200 km under extreme pressure (~50,000 atm) and heat (~1,200°C)."
+  },
+  {
+    emoji: "🌊",
+    q: "Light to cross the Atlantic Ocean",
+    hint: "New York to London, ~5,570 km",
+    seconds: 0.0186,
+    fact: "Light crosses the Atlantic in <strong>~18.6 milliseconds</strong>. However, internet cables take ~70ms due to signal processing, routing, and fibre physics."
+  },
+  {
+    emoji: "🦠",
+    q: "E. coli bacteria to double in population (optimal conditions)",
+    hint: "The doubling time in a warm, nutrient-rich environment",
+    seconds: MIN * 20,
+    fact: "E. coli divides every <strong>~20 minutes</strong> in ideal lab conditions. Starting from one bacterium, you'd have over a billion in ~10 hours."
+  }
+];
+
+// Log-scale slider: maps 0–100 to seconds range
+const LOG_MIN = Math.log10(0.001);  // 1ms
+const LOG_MAX = Math.log10(BYR * 20);
+
+function sliderToSeconds(v) {
+  return Math.pow(10, LOG_MIN + (v / 100) * (LOG_MAX - LOG_MIN));
+}
+
+function secondsToSlider(s) {
+  return Math.max(0, Math.min(100,
+    (Math.log10(s) - LOG_MIN) / (LOG_MAX - LOG_MIN) * 100
+  ));
+}
+
+function formatTime(s) {
+  if (s < 0.001) return (s * 1000).toFixed(2) + ' microseconds';
+  if (s < 1)     return (s * 1000).toFixed(1) + ' ms';
+  if (s < 60)    return s.toFixed(2) + ' s';
+  if (s < 3600)  return (s / 60).toFixed(1) + ' min';
+  if (s < 86400) return (s / 3600).toFixed(1) + ' hr';
+  if (s < WEEK)  return (s / 86400).toFixed(1) + ' days';
+  if (s < MONTH * 2) return (s / WEEK).toFixed(1) + ' weeks';
+  if (s < YEAR)  return (s / MONTH).toFixed(1) + ' months';
+  if (s < DECADE * 1.5) return (s / YEAR).toFixed(1) + ' years';
+  if (s < CENTURY * 1.5) return (s / DECADE).toFixed(1) + ' decades';
+  if (s < KYR * 5) return (s / CENTURY).toFixed(1) + ' centuries';
+  if (s < MYR * 5) return (s / KYR).toFixed(1) + 'k years';
+  if (s < BYR * 2) return (s / MYR).toFixed(1) + 'M years';
+  return (s / BYR).toFixed(2) + 'B years';
+}
+
+function formatTimeFull(s) {
+  return formatTime(s);
+}
+
+const SCALE_LABELS = ['1ms','1s','1min','1hr','1day','1mo','1yr','10yr','1ky','1My','1By'];
+const SCALE_SECONDS = [0.001, 1, 60, 3600, 86400, MONTH, YEAR, DECADE, KYR, MYR, BYR];
+
+// Game state
+let pool, idx, score, roundResults;
+const QS = 10;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showIntro() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('intro').classList.add('active');
+}
+
+function startGame() {
+  pool = shuffle(ITEMS).slice(0, QS);
+  idx = 0; score = 0; roundResults = [];
+  const pips = document.getElementById('pips');
+  pips.innerHTML = '';
+  for (let i = 0; i < QS; i++) {
+    const d = document.createElement('div');
+    d.className = 'pip'; d.id = 'pip-' + i;
+    pips.appendChild(d);
+  }
+  // Build scale labels
+  const labelsEl = document.getElementById('scale-labels');
+  labelsEl.innerHTML = '';
+  SCALE_LABELS.forEach(l => {
+    const s = document.createElement('span');
+    s.textContent = l;
+    labelsEl.appendChild(s);
+  });
+
+  updateBar();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('game').classList.add('active');
+  renderQ();
+}
+
+function updateBar() {
+  document.getElementById('score-text').textContent = score + ' / ' + (idx * 10);
+  document.getElementById('q-counter').textContent = '• Question ' + (idx + 1) + ' of ' + QS;
+  document.getElementById('prog').style.width = (idx / QS * 100) + '%';
+}
+
+function renderQ() {
+  updateBar();
+  const q = pool[idx];
+  document.getElementById('q-emoji').textContent = q.emoji;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('q-hint').textContent = q.hint || '';
+  document.getElementById('q-hint').style.display = q.hint ? '' : 'none';
+
+  // Reset slider to middle
+  const sl = document.getElementById('slider');
+  sl.value = 50;
+  updateSlider();
+
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('next-btn').style.display = 'none';
+  document.getElementById('submit-btn').style.display = 'block';
+  document.getElementById('submit-btn').disabled = false;
+}
+
+function updateSlider() {
+  const v = parseFloat(document.getElementById('slider').value);
+  const s = sliderToSeconds(v);
+  document.getElementById('val-text').textContent = formatTime(s);
+  document.getElementById('val-sub').textContent = s >= 1 ? (s.toExponential(2) + ' seconds') : '';
+}
+
+function submitAnswer() {
+  const v = parseFloat(document.getElementById('slider').value);
+  const guessS = sliderToSeconds(v);
+  const q = pool[idx];
+  const realS = q.seconds;
+
+  // Score: 10 pts for exact order of magnitude, prorated
+  const logErr = Math.abs(Math.log10(guessS) - Math.log10(realS));
+  let pts = Math.max(0, Math.round(10 - logErr * 3));
+  score += pts;
+  roundResults.push({ q, guessS, realS, pts });
+
+  // Pip
+  document.getElementById('pip-' + idx).classList.add(pts >= 7 ? 'ok' : 'bad');
+  document.getElementById('score-text').textContent = score + ' / ' + ((idx + 1) * 10);
+
+  // Verdict
+  const panel = document.getElementById('result-panel');
+  const verdict = document.getElementById('result-verdict');
+  verdict.textContent = pts >= 9 ? '🎯 Spot on!' : pts >= 6 ? '👍 Pretty close!' : pts >= 3 ? '😅 Off by a bit' : '❌ Way off!';
+  verdict.className = 'verdict ' + (pts >= 5 ? 'ok' : 'bad');
+
+  document.getElementById('your-ans').textContent = formatTime(guessS);
+  document.getElementById('real-ans').textContent = formatTime(realS);
+
+  // Comparison bar
+  const realPct = secondsToSlider(realS);
+  const youPct = secondsToSlider(guessS);
+  document.getElementById('cbar-real').style.width = realPct + '%';
+  document.getElementById('cbar-you').style.left = youPct + '%';
+  document.getElementById('cbar-you').className = 'cbar-you' + (pts >= 5 ? '' : ' bad');
+
+  document.getElementById('fact-box').innerHTML = q.fact;
+
+  panel.style.display = 'block';
+  document.getElementById('submit-btn').style.display = 'none';
+  const nb = document.getElementById('next-btn');
+  nb.style.display = 'block';
+  nb.textContent = idx + 1 < QS ? 'Next →' : 'See Results 🎉';
+}
+
+function nextQ() {
+  idx++;
+  if (idx >= QS) showResults();
+  else renderQ();
+}
+
+function showResults() {
+  const pct = score / (QS * 10);
+  let emoji, title, sub, msg;
+  if (pct >= 0.85)      { emoji='🏆'; title='Time Lord!'; sub=''; msg="You have an uncanny sense of time across all scales. Impressive."; }
+  else if (pct >= 0.65) { emoji='🎉'; title='Time Keeper!'; sub=''; msg="Solid intuition for time. A few orders of magnitude slipped by you."; }
+  else if (pct >= 0.45) { emoji='⏱️'; title='Getting there!'; sub=''; msg="Not bad — time is genuinely hard to intuit across huge scales."; }
+  else                   { emoji='🤔'; title='Time flies...'; sub=''; msg="...when you have no idea what's happening. Try again!"; }
+
+  document.getElementById('res-emoji').textContent = emoji;
+  document.getElementById('res-title').textContent = title;
+  document.getElementById('res-score').textContent = score;
+  document.getElementById('res-sub').textContent = sub;
+  document.getElementById('res-msg').textContent = msg;
+  document.getElementById('prog').style.width = '100%';
+  document.getElementById('q-counter').textContent = '• Done!';
+  document.getElementById('score-text').textContent = score + ' / 100';
+
+  const bdList = document.getElementById('bd-list');
+  bdList.innerHTML = '';
+  roundResults.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'bd';
+    d.innerHTML = `<span class="bd-icon">${r.q.emoji}</span>
+      <div class="bd-info">
+        <div class="bd-q">${r.q.q} <span style="color:var(--accent);font-size:.8rem">(+${r.pts}pts)</span></div>
+        <div class="bd-ans">Your guess: ${formatTime(r.guessS)} · <span class="real">Actual: ${formatTime(r.realS)}</span></div>
+      </div>`;
+    bdList.appendChild(d);
+  });
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('results').classList.add('active');
+}
+</script>
+</body>
+</html>
